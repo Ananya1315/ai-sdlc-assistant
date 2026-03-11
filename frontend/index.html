@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<title>AI SDLC Assistant</title>
+
+<style>
+
+body{
+font-family: Arial;
+margin:40px;
+background:#f4f6f8;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0px 0px 10px rgba(0,0,0,0.1);
+}
+
+textarea{
+width:100%;
+height:120px;
+padding:10px;
+font-size:14px;
+border-radius:5px;
+border:1px solid #ccc;
+}
+
+button{
+padding:12px 20px;
+font-size:16px;
+background:#4CAF50;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+button:hover{
+background:#45a049;
+}
+
+.section{
+margin-top:30px;
+}
+
+pre{
+background:#f1f1f1;
+padding:15px;
+border-radius:5px;
+white-space:pre-wrap;
+}
+
+#projects li{
+cursor:pointer;
+padding:6px;
+border-bottom:1px solid #eee;
+}
+
+#projects li:hover{
+background:#f0f0f0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>AI SDLC Assistant</h2>
+
+<textarea id="requirement" placeholder="Enter software requirement..."></textarea>
+
+<br><br>
+
+<button onclick="generateArtifacts()">Generate</button>
+
+<div class="section">
+<h3>User Stories</h3>
+<pre id="stories"></pre>
+</div>
+
+<div class="section">
+<h3>Acceptance Criteria</h3>
+<pre id="criteria"></pre>
+</div>
+
+<div class="section">
+<h3>Test Cases</h3>
+<pre id="tests"></pre>
+</div>
+
+<div class="section">
+<h3>Previous Projects</h3>
+<ul id="projects"></ul>
+</div>
+
+</div>
+
+<script>
+
+async function generateArtifacts(){
+
+let requirement=document.getElementById("requirement").value
+
+document.getElementById("stories").innerText="Generating..."
+document.getElementById("criteria").innerText=""
+document.getElementById("tests").innerText=""
+
+try{
+
+let response=await fetch("http://127.0.0.1:8000/generate",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+requirement:requirement
+})
+})
+
+let data=await response.json()
+
+console.log("API Response:",data)
+
+if(data.data){
+
+document.getElementById("stories").innerText =
+data.data.user_stories.join("\n\n")
+
+document.getElementById("criteria").innerText =
+data.data.acceptance_criteria.join("\n\n")
+
+document.getElementById("tests").innerText =
+data.data.test_cases.join("\n\n")
+
+}else{
+
+document.getElementById("stories").innerText="Error generating output"
+
+}
+
+loadProjects()   // refresh project history
+
+}catch(error){
+
+console.error(error)
+
+document.getElementById("stories").innerText="Backend connection failed"
+
+}
+
+}
+
+
+
+async function loadProjects(){
+
+let response = await fetch("http://127.0.0.1:8000/projects")
+
+let data = await response.json()
+
+let list = document.getElementById("projects")
+
+list.innerHTML=""
+
+data.forEach(project => {
+
+let li=document.createElement("li")
+
+li.innerText = "Project " + project.id + " - " + project.requirement.substring(0,60)
+
+li.onclick = () => loadProject(project.id)
+
+list.appendChild(li)
+
+})
+
+}
+
+
+
+async function loadProject(id){
+
+let response = await fetch("http://127.0.0.1:8000/projects/" + id)
+
+let data = await response.json()
+
+document.getElementById("stories").innerText =
+data.user_stories.join("\n\n")
+
+document.getElementById("criteria").innerText =
+data.acceptance_criteria.join("\n\n")
+
+document.getElementById("tests").innerText =
+data.test_cases.join("\n\n")
+
+}
+
+
+// load history when page opens
+loadProjects()
+
+</script>
+
+</body>
+
+</html>

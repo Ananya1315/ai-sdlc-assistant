@@ -2,11 +2,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import requests
 import json
-
+from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, SessionLocal
 from . import models
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create tables automatically
 models.Base.metadata.create_all(bind=engine)
