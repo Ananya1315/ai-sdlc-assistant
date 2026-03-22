@@ -1,215 +1,404 @@
 <!DOCTYPE html>
 
 <html>
-
 <head>
-<title>AI SDLC Assistant</title>
+<title>SDLC Assistant</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-
 body{
-font-family: Arial;
-margin:40px;
+font-family: 'Segoe UI', sans-serif;
 background:#f4f6f8;
+margin:0;
 }
 
+/* HEADER */
+.header{
+background:#4CAF50;
+color:white;
+padding:15px 20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.hidden{
+display:none;
+}
+
+/* LAYOUT */
 .container{
-max-width:900px;
-margin:auto;
+display:flex;
+gap:20px;
+padding:20px;
+}
+
+.left, .right{
+flex:1;
 background:white;
-padding:30px;
+padding:20px;
 border-radius:10px;
-box-shadow:0px 0px 10px rgba(0,0,0,0.1);
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
 textarea{
 width:100%;
 height:120px;
 padding:10px;
-font-size:14px;
-border-radius:5px;
+border-radius:6px;
 border:1px solid #ccc;
+margin-top:10px;
 }
 
 button{
-padding:12px 20px;
-font-size:16px;
-background:#4CAF50;
-color:white;
+padding:8px 14px;
 border:none;
-border-radius:5px;
+border-radius:6px;
 cursor:pointer;
+margin-top:8px;
+margin-right:5px;
 }
 
-button:hover{
-background:#45a049;
+.generate{ background:#4CAF50; color:white; }
+.secondary{ background:#3498db; color:white; }
+.danger{ background:#e74c3c; color:white; }
+
+/* PROJECT GRID */
+.projects-grid{
+display:flex;
+flex-wrap:wrap;
+gap:15px;
+padding:20px;
 }
 
-.section{
-margin-top:30px;
-}
-
-pre{
-background:#f1f1f1;
+.card{
+background:#f9f9f9;
 padding:15px;
-border-radius:5px;
-white-space:pre-wrap;
+border-radius:8px;
+width:250px;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
+transition:0.2s;
 }
 
-#projects li{
-cursor:pointer;
-padding:6px;
-border-bottom:1px solid #eee;
+.card:hover{
+transform:scale(1.02);
 }
 
-#projects li:hover{
-background:#f0f0f0;
+.card.active{
+border:2px solid #4CAF50;
 }
-
 </style>
 
 </head>
 
 <body>
 
+<!-- AUTH -->
+
+<div id="authSection" style="padding:40px">
+<h2>Welcome to SDLC Assistant</h2>
+<input type="text" id="username" placeholder="Username"><br><br>
+<input type="password" id="password" placeholder="Password"><br><br>
+<button onclick="signup()">Signup</button>
+<button onclick="login()">Login</button>
+</div>
+
+<!-- APP -->
+
+<div id="appSection" class="hidden">
+
+<div class="header">
+<h2>SDLC Assistant</h2>
+<div>
+<span id="userLabel"></span>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
+
 <div class="container">
 
-<h2>AI SDLC Assistant</h2>
+<!-- LEFT -->
 
-<textarea id="requirement" placeholder="Enter software requirement..."></textarea>
+<div class="left">
 
-<br><br>
+<input type="file" id="fileInput">
+<button class="secondary" onclick="uploadRequirement()">Upload</button>
 
-<button onclick="generateArtifacts()">Generate</button>
+<textarea id="requirement" placeholder="Enter requirement..."></textarea>
 
-<div class="section">
+<button id="generateBtn" class="generate" onclick="generateArtifacts()">Generate</button>
+
+<button onclick="saveArtifacts()">Save</button>
+
+<button onclick="exportJSON()">JSON</button> <button onclick="exportMarkdown()">Markdown</button> <button onclick="exportPDF()">PDF</button>
+
+<button onclick="upgradeToPro()">Upgrade 💎</button>
+
+</div>
+
+<!-- RIGHT -->
+
+<div class="right">
+
 <h3>User Stories</h3>
-<pre id="stories"></pre>
-</div>
+<textarea id="stories"></textarea>
 
-<div class="section">
 <h3>Acceptance Criteria</h3>
-<pre id="criteria"></pre>
-</div>
+<textarea id="criteria"></textarea>
 
-<div class="section">
 <h3>Test Cases</h3>
-<pre id="tests"></pre>
+<textarea id="tests"></textarea>
+
 </div>
 
-<div class="section">
-<h3>Previous Projects</h3>
-<ul id="projects"></ul>
 </div>
+
+<!-- PROJECTS -->
+
+<div class="projects-grid" id="projects"></div>
 
 </div>
 
 <script>
 
+const BASE_URL = "http://127.0.0.1:8000"
+
+let userId = null
+let isPro = false
+let currentProjectId = null
+
+// AUTH
+async function signup(){
+let res = await fetch(BASE_URL + "/signup",{method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username:username.value,password:password.value})})
+let data = await res.json()
+alert(data.message)
+}
+
+async function login(){
+let res = await fetch(BASE_URL + "/login",{method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username:username.value,password:password.value})})
+let data = await res.json()
+
+if(data.user_id){
+userId = data.user_id
+isPro = data.is_pro === 1
+
+localStorage.setItem("user_id",userId)
+localStorage.setItem("is_pro",isPro)
+
+document.getElementById("authSection").style.display="none"
+document.getElementById("appSection").classList.remove("hidden")
+
+document.getElementById("userLabel").innerText = "User " + userId
+
+loadProjects()
+}
+}
+
+function logout(){
+localStorage.clear()
+location.reload()
+}
+
+// GENERATE
 async function generateArtifacts(){
 
-let requirement=document.getElementById("requirement").value
+let btn = document.getElementById("generateBtn")
+btn.disabled = true
+btn.innerText = "Generating..."
 
-document.getElementById("stories").innerText="Generating..."
-document.getElementById("criteria").innerText=""
-document.getElementById("tests").innerText=""
+try{
+let res = await fetch(BASE_URL + "/generate",{method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({requirement:requirement.value,user_id:userId})
+})
+
+let data = await res.json()
+
+if(data.data){
+currentProjectId = data.project_id
+setOutput(
+data.data.user_stories.join("\n\n"),
+data.data.acceptance_criteria.join("\n\n"),
+data.data.test_cases.join("\n\n")
+)
+}
+
+loadProjects()
+
+}catch{
+setOutput("Error","","")
+}
+
+btn.disabled=false
+btn.innerText="Generate"
+}
+
+// PROJECTS
+async function loadProjects(){
+
+let res = await fetch(BASE_URL + "/projects/user/" + userId)
+let data = await res.json()
+
+let container = document.getElementById("projects")
+container.innerHTML=""
+
+data.forEach(p=>{
+let card=document.createElement("div")
+card.className="card"
+card.id="card-"+p.id
+
+card.innerHTML=`
+<h4>Project ${p.id}</h4>
+<p>${p.requirement.substring(0,60)}...</p>
+<button onclick="openProject(${p.id})">Open</button>
+<button onclick="deleteProject(${p.id})" class="danger">Delete</button>
+`
+
+container.appendChild(card)
+})
+}
+
+function highlightCard(id){
+document.querySelectorAll(".card").forEach(c=>c.classList.remove("active"))
+document.getElementById("card-"+id)?.classList.add("active")
+}
+
+async function openProject(id){
+
+let res = await fetch(BASE_URL + "/projects/" + id)
+let data = await res.json()
+
+currentProjectId = id
+
+setOutput(
+data.user_stories.join("\n\n"),
+data.acceptance_criteria.join("\n\n"),
+data.test_cases.join("\n\n")
+)
+
+highlightCard(id)
+}
+
+async function deleteProject(id){
+if(!confirm("Delete?")) return
+await fetch(BASE_URL+"/projects/"+id,{method:"DELETE"})
+loadProjects()
+}
+
+// SAVE
+async function saveArtifacts(){
+if(!currentProjectId) return alert("Select project")
+await fetch(BASE_URL+"/projects/"+currentProjectId,{
+method:"PUT",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_stories:stories.value.split("\n\n"),
+acceptance_criteria:criteria.value.split("\n\n"),
+test_cases:tests.value.split("\n\n")
+})
+})
+alert("Saved")
+}
+
+// PDF
+function exportPDF(){
+if(!isPro) return alert("Upgrade to Pro")
+const {jsPDF}=window.jspdf
+const doc=new jsPDF()
+let y=10
+
+function section(t,c){
+doc.text(t,10,y); y+=6
+doc.setFontSize(10)
+doc.splitTextToSize(c,180).forEach(l=>{
+if(y>280){doc.addPage();y=10}
+doc.text(l,10,y); y+=5
+})
+y+=5
+}
+
+doc.text("SDLC Report",10,y); y+=10
+section("Requirement",requirement.value)
+section("Stories",stories.value)
+section("Criteria",criteria.value)
+section("Tests",tests.value)
+
+doc.save("report.pdf")
+}
+
+// EXPORT LOCKED
+function exportJSON(){ if(!isPro) return alert("Upgrade"); download(JSON.stringify(getData(),null,2),"data.json") }
+function exportMarkdown(){ if(!isPro) return alert("Upgrade"); download("# Data\n"+stories.value,"data.md") }
+
+// PAYMENT
+async function upgradeToPro(){
+if(isPro) return alert("Already Pro")
+alert("Fake payment...")
+await fetch(BASE_URL+"/upgrade/"+userId,{method:"POST"})
+isPro=true
+localStorage.setItem("is_pro",true)
+alert("Upgraded 🎉")
+}
+
+// HELPERS
+function setOutput(s,c,t){ stories.value=s; criteria.value=c; tests.value=t }
+function getData(){ return {requirement:requirement.value,stories:stories.value} }
+function download(c,n){ let b=new Blob([c]); let a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=n; a.click() }
+
+// AUTO LOGIN
+window.onload=()=>{
+let u=localStorage.getItem("user_id")
+let p=localStorage.getItem("is_pro")
+if(u){
+userId=u
+isPro=p==="true"
+document.getElementById("authSection").style.display="none"
+document.getElementById("appSection").classList.remove("hidden")
+loadProjects()
+}
+}
+async function uploadRequirement(){
+
+if(!isPro){
+alert("Upgrade to Pro to upload files")
+return
+}
+
+let file = document.getElementById("fileInput").files[0]
+
+if(!file){
+alert("Select a file first")
+return
+}
+
+let formData = new FormData()
+formData.append("file", file)
 
 try{
 
-let response=await fetch("http://127.0.0.1:8000/generate",{
+let res = await fetch(BASE_URL + "/upload",{
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-requirement:requirement
-})
+body:formData
 })
 
-let data=await response.json()
+let data = await res.json()
 
-console.log("API Response:",data)
+document.getElementById("requirement").value = data.requirement
 
-if(data.data){
+alert("File uploaded successfully")
 
-document.getElementById("stories").innerText =
-data.data.user_stories.join("\n\n")
-
-document.getElementById("criteria").innerText =
-data.data.acceptance_criteria.join("\n\n")
-
-document.getElementById("tests").innerText =
-data.data.test_cases.join("\n\n")
-
-}else{
-
-document.getElementById("stories").innerText="Error generating output"
-
-}
-
-loadProjects()   // refresh project history
-
-}catch(error){
-
-console.error(error)
-
-document.getElementById("stories").innerText="Backend connection failed"
-
+}catch{
+alert("Upload failed")
 }
 
 }
-
-
-
-async function loadProjects(){
-
-let response = await fetch("http://127.0.0.1:8000/projects")
-
-let data = await response.json()
-
-let list = document.getElementById("projects")
-
-list.innerHTML=""
-
-data.forEach(project => {
-
-let li=document.createElement("li")
-
-li.innerText = "Project " + project.id + " - " + project.requirement.substring(0,60)
-
-li.onclick = () => loadProject(project.id)
-
-list.appendChild(li)
-
-})
-
-}
-
-
-
-async function loadProject(id){
-
-let response = await fetch("http://127.0.0.1:8000/projects/" + id)
-
-let data = await response.json()
-
-document.getElementById("stories").innerText =
-data.user_stories.join("\n\n")
-
-document.getElementById("criteria").innerText =
-data.acceptance_criteria.join("\n\n")
-
-document.getElementById("tests").innerText =
-data.test_cases.join("\n\n")
-
-}
-
-
-// load history when page opens
-loadProjects()
 
 </script>
 
 </body>
-
 </html>
