@@ -36,115 +36,44 @@ def home():
     return {"message": "SDLC Assistant backend running"}
 
 
-# Generate SDLC Artifacts
 @app.post("/generate")
 def generate_artifacts(data: RequirementInput):
 
     requirement_text = data.requirement
-    user_id: int 
-    prompt = f"""
-You are a software engineering assistant.
 
-Convert the following requirement into structured JSON.
+    structured_output = {
+        "user_stories": [
+            "As a user, I want to create and manage tasks so that I stay organized"
+        ],
+        "acceptance_criteria": [
+            "Given user is logged in, when they create a task, then it should be saved successfully"
+        ],
+        "test_cases": [
+            "TC01 - User creates a task successfully",
+            "TC02 - Task appears in the project list"
+        ]
+    }
 
-Return ONLY valid JSON in this format:
+    db = SessionLocal()
 
-{{
-  "user_stories": [
-    "As a ..., I want ..., so that ..."
-  ],
-  "acceptance_criteria": [
-    "Given ..., when ..., then ..."
-  ],
-  "test_cases": [
-    "TC01 - ...",
-    "TC02 - ..."
-  ]
-}}
+    project = models.Project(
+        requirement=requirement_text,
+        user_stories=json.dumps(structured_output["user_stories"]),
+        acceptance_criteria=json.dumps(structured_output["acceptance_criteria"]),
+        test_cases=json.dumps(structured_output["test_cases"]),
+        user_id=data.user_id
+    )
 
-Do not add explanations.
-Do not add extra text.
-Return JSON only.
+    db.add(project)
+    db.commit()
+    db.refresh(project)
 
-Requirement:
-{requirement_text}
-"""
+    db.close()
 
-    try:
-
-        structured_output = None
-        ai_text = ""
-
-        # Retry AI generation twice
-        for attempt in range(2):
-
-            response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": "phi3:mini",
-                    "prompt": prompt,
-                    "stream": False
-                },
-                timeout=600
-            )
-
-            result = response.json()
-
-            if "response" not in result:
-                raise Exception("Invalid response from Ollama")
-
-            ai_text = result["response"].strip()
-
-            # Clean formatting from model output
-            ai_text = ai_text.replace("```json", "").replace("```", "").strip()
-
-            start = ai_text.find("{")
-            end = ai_text.rfind("}") + 1
-
-            if start == -1 or end == -1:
-                continue
-
-            cleaned_json = ai_text[start:end]
-
-            try:
-                structured_output = json.loads(cleaned_json)
-                break
-
-            except json.JSONDecodeError:
-                if attempt == 1:
-                    return {
-                        "error": "AI failed to generate valid JSON after retry",
-                        "raw_output": ai_text
-                    }
-
-        # Save project to database
-        db = SessionLocal()
-
-        project = models.Project(
-            requirement=requirement_text,
-            user_stories=json.dumps(structured_output.get("user_stories", [])),
-            acceptance_criteria=json.dumps(structured_output.get("acceptance_criteria", [])),
-            test_cases=json.dumps(structured_output.get("test_cases", [])),
-            user_id=data.user_id 
-        )
-
-        db.add(project)
-        db.commit()
-        db.refresh(project)
-
-        response_data = {
-            "project_id": project.id,
-            "data": structured_output
-        }
-
-        db.close()
-
-        return response_data
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
+    return {
+        "project_id": project.id,
+        "data": structured_output
+    }
 # Get All Projects
 @app.get("/projects/user/{user_id}")
 def get_projects(user_id: int):
