@@ -1,24 +1,200 @@
-# AI-Powered SDLC Assistant 🚧
+# SDLC Assistant
 
-## Overview
-AI-Powered SDLC Assistant is a web-based tool designed to explore AI-assisted automation in early stages of the Software Development Life Cycle (SDLC).
+A full-stack SDLC (Software Development Life Cycle) management platform built with **FastAPI**, **SQLite**, and a web frontend. The application helps project managers and development teams manage software projects by generating SDLC artifacts, tracking project workflow, and managing project tasks.
 
-The system focuses on transforming unstructured software requirements into structured engineering artifacts to support development workflows.
+> 🚧 This project is actively under development and is being enhanced into a backend-focused, SQL-heavy SDLC management platform.
 
-## Problem Statement
-Software requirements are often provided in informal natural language formats. Developers must manually convert them into user stories, acceptance criteria, and testing plans, which is time-consuming and prone to inconsistencies.
+---
 
-This project aims to assist this requirement-to-development translation using AI.
+## Features
 
-## Current Status
-🚧 Ongoing – Architecture design and MVP development phase.
+### Authentication
+- User Signup
+- User Login
+- Session-based access using user IDs
 
-## Planned Tech Stack
-- Python (FastAPI)
-- LLM APIs
-- Web Interface (React / minimal frontend)
+### AI-Assisted Requirement Analysis
+- Generate User Stories
+- Generate Acceptance Criteria
+- Generate Test Cases
+- Requirement file upload support
+- Editable generated artifacts
+- Export artifacts as JSON
+- Export artifacts as Markdown
 
-## Goals (MVP)
-- Requirement input interface
-- AI-generated structured SDLC outputs
-- Structured report generation
+### Project Management
+- Create projects
+- Store projects in SQLite database
+- View previous projects
+- Edit generated artifacts
+- Delete projects
+
+### SDLC Workflow Engine
+- Track project lifecycle
+- Workflow stages:
+  - Requirement
+  - Design
+  - Development
+  - Testing
+  - Deployment
+- Advance project through workflow stages
+- View current workflow status
+
+### Task Management
+- Create tasks for a project
+- Assign tasks to users
+- Track task status
+  - To Do
+  - In Progress
+  - Done
+- View all tasks belonging to a project
+- Status validation for task updates
+
+---
+
+## Tech Stack
+
+### Backend
+- FastAPI
+- SQLAlchemy ORM
+- SQLite
+
+### Frontend
+- HTML
+- CSS
+- JavaScript
+
+### AI
+- Local LLM integration (currently mocked during development)
+
+---
+
+## Database Schema
+
+### Users
+
+| Column | Type |
+|---------|------|
+| id | Integer |
+| username | Text |
+| password | Text |
+
+---
+
+### Projects
+
+| Column | Type |
+|---------|------|
+| id | Integer |
+| requirement | Text |
+| user_stories | Text |
+| acceptance_criteria | Text |
+| test_cases | Text |
+| current_stage | Text |
+| user_id | Integer |
+
+---
+
+### Tasks
+
+| Column | Type |
+|---------|------|
+| id | Integer |
+| title | Text |
+| description | Text |
+| status | Text |
+| project_id | Integer |
+| assigned_to | Integer |
+
+---
+
+## Current API Endpoints
+
+### Authentication
+
+```
+POST /signup
+POST /login
+```
+
+### Project APIs
+
+```
+POST   /generate
+GET    /projects/{id}
+PUT    /projects/{id}
+DELETE /projects/{id}
+GET    /projects/user/{user_id}
+```
+
+### Workflow APIs
+
+```
+POST /project/{project_id}/advance
+GET  /projects/{project_id}/workflow
+```
+
+### Task APIs
+
+```
+POST /tasks/create
+GET  /projects/{project_id}/tasks
+PUT  /tasks/{task_id}/status
+```
+
+---
+
+## Project Structure
+
+```
+backend/
+│
+├── main.py
+├── models.py
+├── database.py
+└── ...
+
+frontend/
+│
+├── index.html
+├── script.js
+└── style.css
+```
+
+---
+
+## Deployment
+
+Frontend is deployed using Netlify.
+
+Backend is deployed using Render.
+
+---
+
+## Roadmap
+
+Upcoming enhancements include:
+
+- JWT Authentication
+- Role-Based Access Control
+- Team Management
+- Workflow Validation Rules
+- Activity Logs
+- Task Comments
+- Docker Support
+- GitHub Actions CI/CD
+- PostgreSQL Migration
+- AI-powered API Suggestions
+- SaaS Billing (Mock Razorpay)
+- Responsive Dashboard
+- Architecture Documentation
+
+---
+
+## Author
+
+**Ananya Samudrala**
+
+Computer Science Engineering Student
+
+Backend • System Design • Full Stack Development
